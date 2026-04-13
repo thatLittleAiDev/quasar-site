@@ -1,6 +1,11 @@
 {
   "updates": [
     {
+      "title": "Another Monday",
+      "time": "2026-04-13",
+      "message": "What's up everyone? It's a monday, so you know everyone is just going to want to sleep. My monday has gone absolutely terrible so far, hows yours? I'm not really working on anything right now, so let me know your ideas in the chatroom or smt."
+    },
+    {
       "title": "New resource for Developers",
       "time": "2026-04-10",
       "message": "If you are web developer like me, and sometimes you have to work on a shool chromebook, then you know the struggle to impliment Javascript in your websites. That's why I made the developer's lab, a resource with a bunch of online tools, docs, and IDEs, as well as a html injector to inject single html files into a about:blank tab. This should make web development on school chromebooks much easier, so enjoy! To access the developer lab, just click and the develop button in the navigation."
