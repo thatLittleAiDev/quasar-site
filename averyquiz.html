@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>THE GAUNTLET // MASTER ENGINE</title>
+    <style>
+        :root { 
+            --primary: #ff4d4d; 
+            --bg: #111116; 
+            --text: #f4f4f4; 
+            --card-bg: #1c1c24;
+            --success: #2e7d32;
+            --error: #d32f2f; 
+            --captcha-blue: #1a73e8;
+        }
+        
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #quiz-card { 
+            width: 100%; 
+            max-width: 600px; 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+            position: relative;
+            border: 1px solid #333;
+            z-index: 10;
+        }
+        
+        .meta { 
+            display: flex; 
+            justify-content: space-between; 
+            font-weight: 800; 
+            color: #777; 
+            margin-bottom: 30px; 
+            font-size: 0.75rem; 
+            letter-spacing: 1px; 
+        }
+        
+        .question-text { 
+            font-size: 1.6rem; 
+            font-weight: 700; 
+            margin-bottom: 30px; 
+            line-height: 1.3; 
+        }
+        
+        .options { 
+            display: grid; 
+            gap: 12px; 
+            position: relative;
+        }
+        
+        button { 
+            background: #2a2a35; 
+            border: 2px solid #444; 
+            color: var(--text);
+            padding: 16px; 
+            font-size: 1rem; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: border-color 0.2s, background-color 0.2s; 
+            font-weight: 600; 
+            text-align: left; 
+            position: relative;
+            will-change: transform;
+        }
+        
+        button:hover { 
+            border-color: var(--primary); 
+            background: #332226; 
+        }
+        
+        .trigger-link { 
+            color: var(--primary); 
+            text-decoration: underline; 
+            cursor: pointer; 
+            font-weight: 900; 
+        }
+        
+        /* High-fidelity Feedback Overlays */
+        #feedback-screen { 
+            position: fixed; 
+            inset: 0; 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 4rem; 
+            font-weight: 900; 
+            z-index: 200; 
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            letter-spacing: 2px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        #feedback-screen.show { opacity: 1; }
+        
+        /* Death Screen */
+        #death-screen { 
+            position: fixed; 
+            inset: 0; 
+            background: var(--error); 
+            color: white; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 500; 
+        }
+
+        #death-title {
+            font-size: 4.5rem; 
+            font-weight: 900; 
+            letter-spacing: 1px;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #death-actions {
+            margin-top: 40px;
+            display: flex;
+            gap: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        #death-actions button {
+            background: white;
+            color: var(--error);
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        #death-actions button:hover {
+            background: #f4f4f4;
+            transform: translateY(-2px);
+        }
+
+        /* Simulated Rage Ad Popups */
+        .fake-popup {
+            position: absolute;
+            width: 280px;
+            background: #fff;
+            color: #000;
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.3);
+            font-family: 'Arial', sans-serif;
+            z-index: 1000;
+            padding: 10px;
+        }
+        .fake-popup-header {
+            background: #000080;
+            color: white;
+            padding: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .fake-popup-close {
+            background: #eee;
+            color: #000;
+            border: 1px solid #000;
+            width: 16px;
+            height: 16px;
+            text-align: center;
+            line-height: 14px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        .fake-popup-body {
+            padding: 15px 5px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .fake-popup-btn {
+            background: #ccc;
+            border: 1px solid #444;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* CAPTCHA Styling */
+        #captcha-container {
+            display: none;
+            background: white;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .captcha-header { background: var(--captcha-blue); color: white; padding: 20px; margin-bottom: 15px; }
+        .captcha-header h2 { margin: 0; font-size: 1.4rem; }
+        .captcha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; height: 350px; }
+        .captcha-cell { background-image: url('https://i.imgur.com/CEjOtYQ_d.webp?maxwidth=760&fidelity=grand'); background-size: 300% 300%; cursor: pointer; position: relative; }
+        .c-0 { background-position: 0% 0%; } .c-1 { background-position: 50% 0%; } .c-2 { background-position: 100% 0%; }
+        .c-3 { background-position: 0% 50%; } .c-4 { background-position: 50% 50%; } .c-5 { background-position: 100% 50%; }
+        .c-6 { background-position: 0% 100%; } .c-7 { background-position: 50% 100%; } .c-8 { background-position: 100% 100%; }
+        .captcha-cell.selected { box-shadow: inset 0 0 0 3px var(--captcha-blue); }
+        .captcha-cell.selected::after { content: '✓'; position: absolute; top: 5px; left: 5px; background: var(--captcha-blue); color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+        .captcha-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .captcha-verify-btn { background: var(--captcha-blue); color: white; border: none; padding: 12px 24px; font-weight: 700; cursor: pointer; }
+
+        #rage-timer {
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="feedback-screen"></div>
+
+<div id="death-screen">
+    <div id="death-title">YOU LOST BUD</div>
+    <div id="death-actions">
+        <button onclick="retry()">TRY AGAIN</button>
+        <button onclick="goToMainMenu()">MAIN MENU</button>
+    </div>
+</div>
+
+<div id="quiz-card">
+    <div id="start-screen">
+        <h1 style="text-align: center; letter-spacing: 2px;">THE GAUNTLET</h1>
+        <div class="options">
+            <button onclick="startGame('part1')">PART ONE: THE BASICS</button>
+            <button onclick="startGame('part2')">PART TWO: THE VOID</button>
+            <button onclick="startGame('part3')" style="border-color: var(--primary); background: #261111;">PART THREE: ABSOLUTE RAGE</button>
+            <button onclick="forceUnlockAudio()" style="font-size:0.75rem; color:#666; border:1px dashed #333; text-align:center;">🔧 FIX AUDIO DRIVERS (CLICK ME FIRST IF SILENT)</button>
+        </div>
+    </div>
+    
+    <div id="captcha-container">
+        <div class="captcha-header">
+            <h2>Select all squares with a <span style="text-decoration: underline;">human</span></h2>
+            <p>If there are none, click verify to proceed.</p>
+        </div>
+        <div class="captcha-grid">
+            <div class="captcha-cell c-0" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-1" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-2" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-3" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-4" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-5" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-6" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-7" onclick="toggleCaptchaTile(this)"></div>
+            <div class="captcha-cell c-8" onclick="toggleCaptchaTile(this)"></div>
+        </div>
+        <div class="captcha-footer">
+            <div style="color: #666; font-size: 0.8rem;">Engine Security Verification v2.4</div>
+            <button class="captcha-verify-btn" onclick="verifyCaptcha()">Verify</button>
+        </div>
+    </div>
+    
+    <div id="game-ui" style="display:none;">
+        <div id="rage-timer">0.00</div>
+        <div class="meta">
+            <div id="lives-display">SANITY: 3</div>
+            <div id="score-display">01 / 40</div>
+        </div>
+        <div id="question" class="question-text"></div>
+        <div id="options" class="options"></div>
+    </div>
+</div>
+
+<script>
+    const part1 = [
+        { q: "What color is a red apple?", a: ["Red", "Blue", "Despair", "A Fruit"], correct: 2 },
+        { q: "1 + 1 =", a: ["2", "11", "Window", "The Heat Death of the Universe"], correct: 3 },
+        { q: "What is the capital of France?", a: ["Paris", "P", "F", "Baggette"], correct: 3 },
+        { q: "Find the Determinant of a 2x2 matrix [[a,b],[c,d]]:", a: ["ad - bc", "ab - cd", "Trevor", "It's impossible"], correct: 2 },
+        { q: "Which of these is a real word?", a: ["Gronk", "Splendiferous", "Phteven", "The previous answer"], correct: 0 },
+        { q: "If Trevor is IV, who was Trevor III?", a: ["His Dad", "A Ghost", "The Prototype", "Trevor Samuel Tutoring III"], correct: 1 },
+        { q: "What is the dot product of [1, 2] and [3, 4]?", a: ["7", "11", "Vector", "Cheese"], correct: 3 },
+        { q: "Click the 'Smallest' answer:", a: ["Ant", "Atom", "The font size", "Your chances of winning"], correct: 3 },
+        { q: "Solve for x: x + Trevor = Success", a: ["Study", "x = Success - Trevor", "4", "True"], correct: 0 },
+        { q: "Spell 'Easy':", a: ["E-A-S-Y", "Eee-zee", "It's not", "Correct"], correct: 2 },
+        { q: "Where is the moon?", a: ["Space", "Up", "In the sky", "In this question"], correct: 3 },
+        { q: "What is 0 divided by 0?", a: ["0", "1", "Undefined", "Trevor's bank account"], correct: 3 },
+        { q: "Is this question 13?", a: ["Yes", "No", "Maybe", "I'm lost"], correct: 2 },
+        { q: "Which hand do you use to write?", a: ["Left", "Right", "Both", "A pen"], correct: 3 },
+        { q: "How many grains of sand are in the Sahara?", a: ["4", "Not enough", "More than 4", "None"], correct: 2 },
+        { q: "How many letters in 'The Alphabet'?", a: ["26", "11", "8", "Infinite"], correct: 3 },
+        { q: "What is the capital of Trevor-land?", a: ["Brooklyn Park", "Washington", "The Website", "A Calculator"], correct: 3 },
+        { q: "Press the <span id='hidden-trigger' class='trigger-link'>button</span> to proceed.", a: ["The Button", "Don't Press", "This one", "The other one"], correct: 1, interactive: "hidden-button" },
+        { q: "If you pass the person in 2nd, what place are you in?", a: ["1st", "2nd", "3rd", "Last"], correct: 3 },
+        { q: "HOVER over the Sanity display to continue:", a: ["DO IT", "NO", "NEVER", "WHY"], correct: 0, interactive: "hover-sanity" },
+        { q: "Which came first?", a: ["The Chicken", "The Egg", "Trevor", "The question"], correct: 2 },
+        { q: "The identity matrix multiplied by Vector A is:", a: ["Vector A", "0", "1", "Trevor"], correct: 3 },
+        { q: "Solve for X in AX = B where A is the identity:", a: ["A", "B", "1", "42"], correct: 3 },
+        { q: "What is the opposite of 'Opposite'?", a: ["Same", "Opposite", "Not the same", "Trevor"], correct: 3 },
+        { q: "Blue + Yellow =", a: ["Green", "Blew", "Yell", "Confusion"], correct: 3 },
+        { q: "What is the square root of -1?", a: ["Imaginary", "i", "Error", "Trevor's secret"], correct: 3 },
+        { q: "Which way is 'Down'?", a: ["South", "The Floor", "Australia", "Relative"], correct: 0 },
+        { q: "Are you Trevor?", a: ["Yes", "No", "I wish", "I am the website"], correct: 2 },
+        { q: "What is the 30th question?", a: ["This one", "The next one", "The last one", "None of these"], correct: 3 },
+        { q: "CLICK the score '00/40' to advance:", a: ["ALREADY DID", "NOPE", "IT'S A TRAP", "GO"], correct: 0, interactive: "click-score" },
+        { q: "How much wood could a woodchuck chuck?", a: ["All of it", "Zero", "As much as he wants", "Your soul"], correct: 3 },
+        { q: "What year is it?", a: ["2026", "The Past", "The Future", "Void Time"], correct: 3 },
+        { q: "Are you still here?", a: ["Regrettably", "Yes", "I left an hour ago", "Who are you?"], correct: 3 },
+        { q: "Which button is the correct one?", a: ["This one", "That one", "The one you didn't click", "The button doesn't exist"], correct: 3 },
+        { q: "What is the sound of one hand clapping?", a: ["Silence", "Slap", "A glitch", "The sound of failure"], correct: 3 },
+        { q: "What is the meaning of life?", a: ["42", "Happiness", "More questions", "Nothing"], correct: 2 },
+        { q: "Who is in control?", a: ["You", "The Computer", "Trevor", "The void"], correct: 2 },
+        { q: "Is this question necessary?", a: ["Yes", "No", "It's mandatory", "Everything is"], correct: 3 },
+        { q: "Are we done yet?", a: ["Almost", "No", "Never", "I hope so"], correct: 2 },
+        { q: "ULTIMATE FINAL: Click the void.", a: ["The Void", "Darkness", "Nothingness", "THE VOID"], correct: 0 }
+    ];
+
+    const part2 = [
+        { q: "Did you enjoy the CAPTCHA?", a: ["Yes", "No", "Trevor", "Never Ask Me Again"], correct: 3 },
+        { q: "Welcome to the Void. What is your name?", a: ["Trevor", "Not Trevor", "I forgot", "Computer"], correct: 1 },
+        { q: "Simulation Check: 2 + 2 =", a: ["4", "22", "Fish", "The Matrix"], correct: 2 },
+        { q: "Which button is the most red?", a: ["This one", "That one", "Red", "Crimson"], correct: 0 },
+        { q: "If you drop an apple in the void, does it make a sound?", a: ["Yes", "No", "Despair", "Trevor laughs"], correct: 3 },
+        { q: "What is the square root of your sanity?", a: ["3", "2", "1", "0"], correct: 3 },
+        { q: "Click the answer that doesn't exist:", a: ["Nothing", "Void", "The fourth choice", ""], correct: 3 },
+        { q: "Is Trevor watching you?", a: ["Yes", "No", "Maybe", "He is the code"], correct: 3 },
+        { q: "Would you like to skip this question?", a: ["Yes", "No", "Please", "Nooo"], correct: 1 },
+        { q: "Spell 'Void' backwards:", a: ["dioV", "diov", "Diov", "Trevor"], correct: 1 },
+        { q: "How many lives do you have left?", a: ["3", "2", "1", "Check the top"], correct: 3 },
+        { q: "What is the capital of the moon?", a: ["Cheese", "None", "Crater", "Trevor-ville"], correct: 1 },
+        { q: "Is this question real?", a: ["Yes", "No", "Maybe", "I'm dreaming"], correct: 1 },
+        { q: "Click the button that is closest to your mouse:", a: ["This one", "Not this one", "Over here", "All of them"], correct: 3 },
+        { q: "What happens when you lose?", a: ["Reset", "Death", "You lost bud", "Nothing"], correct: 2 },
+        { q: "How many buttons are on the screen?", a: ["4", "5", "6", "7"], correct: 0 },
+        { q: "If 1=5, 2=10, 3=15, 4=20, then 5=?", a: ["25", "5", "50", "1"], correct: 1 },
+        { q: "Click the last answer:", a: ["First", "Second", "Third", "Last"], correct: 3 },
+        { q: "What is the opposite of nothing?", a: ["Everything", "Something", "Trevor", "Void"], correct: 0 },
+        { q: "Are we in a quiz?", a: ["Yes", "No", "Maybe", "It's a gauntlet"], correct: 3 },
+        { q: "What color is the background?", a: ["White", "Grey", "F4f4f4", "Despair"], correct: 2 },
+        { q: "How many questions are left?", a: ["20", "19", "18", "Too many"], correct: 3 },
+        { q: "Click the safest button:", a: ["Safe", "Danger", "Neutral", "Trevor"], correct: 3 },
+        { q: "What is the meaning of Part 2?", a: ["Panic", "More Questions", "Nothing", "Trevor"], correct: 0 },
+        { q: "Is this question 25?", a: ["Yes", "No", "Maybe", "26"], correct: 1 },
+        { q: "Solve for y: y - Void = 0", a: ["0", "Void", "1", "Trevor"], correct: 1 },
+        { q: "What is the sound of Trevor clapping?", a: ["Loud", "Silence", "Failure", "A glitch"], correct: 2 },
+        { q: "Do you want to go back to Main Menu?", a: ["Yes", "No", "NEVER", "PLEASE"], correct: 1 },
+        { q: "Which way is Up?", a: ["Down", "North", "The Ceiling", "Relative"], correct: 3 },
+        { q: "CLICK THE SCORE string again", a: ["Done", "Nope", "Wrong", "GO"], correct: 0, interactive: "click-score" },
+        { q: "Do you hear it?", a: ["Hear what?", "Yes", "No", "The void"], correct: 0 },
+        { q: "What year is it in the void?", a: ["2026", "No Year", "The Future", "The Past"], correct: 1 },
+        { q: "Act cool.", a: ["Okay", "Why?", "Nope", "Help"], correct: 0 },
+        { q: "Click the most infuriating button:", a: ["This one", "That one", "All of them", "The void"], correct: 2 },
+        { q: "Are you still surviving?", a: ["barely", "Yes", "No", "Trevor"], correct: 0 },
+        { q: "Would Trevor lie to you?", a: ["Yes", "No", "Always", "Never"], correct: 2 },
+        { q: "Is there an end to this?", a: ["Yes", "No", "What", "Hello"], correct: 1 },
+        { q: "What is the square root of -2?", a: ["i", "Error", "Trevor's secret", "Imaginary"], correct: 2 },
+        { q: "Are you ready for the last question?", a: ["Yes", "No", "Maybe", "Please"], correct: 1 },
+        { q: "VOID FINAL: Click the void.", a: ["THE VOID", "Darkness", "Nothingness", "The Void"], correct: 0 }
+    ];
+
+    const part3 = [
+        { q: "Quick! Click the Green Button!", a: ["Green Button", "Green Button", "Green Button", "Red Button"], correct: 3, behavior: "color-bait" },
+        { q: "The buttons are escaping. Catch the right one.", a: ["Catch Me", "Not Me", "Wrong", "Loser"], correct: 0, behavior: "flee" },
+        { q: "Hurry up! Remaining Time: 2 Seconds!!", a: ["Panic", "4", "22", "Fish"], correct: 2, behavior: "fake-timer" },
+        { q: "Click the answer that has exactly 11 letters:", a: ["Mellifluous", "The Alphabet", "Counterstrike", "Supernormal"], correct: 1 },
+        { q: "CRITICAL SYSTEM ERROR. Click OK to prevent computer wipe.", a: ["OK", "Cancel", "Ignore", "The invisible space below"], correct: 3, interactive: "hidden-button" },
+        { q: "Which button contains an actual asset?", a: ["Button", "Asset", "Value", ""], correct: 3 },
+        { q: "Don't look behind you. What is 0 x Infinity?", a: ["0", "Infinity", "Undefined", "Trevor"], correct: 2, behavior: "flee" },
+        { q: "Hover over Sanity to reveal the hidden correct path.", a: ["I hovered", "Liar", "Where is it?", "Death"], correct: 1, interactive: "hover-sanity-trap" },
+        { q: "Type 'Password123' into your mind. What is the 4th digit?", a: ["s", "s", "p", "w"], correct: 1 },
+        { q: "Click the option located closest to Brooklyn Park, MN.", a: ["Minneapolis", "The Moon", "This specific button", "St. Paul"], correct: 2 },
+        { q: "Are you paying attention? Click the third button.", a: ["Button 3", "Button 1", "Button 4", "Button 2"], correct: 0 },
+        { q: "If a tree falls and no one is around, does it make a choice?", a: ["Yes", "No", "Pineapple", "The Volume Slider"], correct: 2, behavior: "flee" },
+        { q: "DO NOT PRESS ANY BUTTON.", a: ["I pressed", "Skip", "The Score display", "Die"], correct: 2, interactive: "click-score" },
+        { q: "What is the square root of your current score?", a: ["1", "3.6", "Error", "The actual prompt text"], correct: 2 },
+        { q: "Which team won the 2025 Super Bowl?", a: ["Eagles", "Chiefs", "Vikings", "Who cares"], correct: 1, behavior: "fake-timer" },
+        { q: "Click the safest option listed here:", a: ["Danger", "Extremely Dangerous", "Guaranteed Loss", "Trevor's Wrath"], correct: 2 },
+        { q: "How many buttons have you clicked in total today?", a: ["Too many", "Not enough", "The true count", "None of these"], correct: 3, behavior: "flee" },
+        { q: "Solve for y: If y = rage, then rage squared equals:", a: ["Double Rage", "Broken Monitor", "Part 4", "Nothing"], correct: 1 },
+        { q: "This question doesn't have a correct answer. Guess anyway.", a: ["Wrong", "Failing", "Mistake", "Bait"], correct: 0 },
+        { q: "Look! An advertisement popped up. Close it safely.", a: ["Click X", "Ignore it", "Click the question", "Format C:"], correct: 2, behavior: "spawn-ad" },
+        { q: "What is the color of the background?", a: ["#f4f4f4", "#111116", "Black", "Despair"], correct: 1 },
+        { q: "Click the smallest font size element.", a: ["Giant", "Medium", "Small", "Your patience"], correct: 3 },
+        { q: "Are you still tracking? What question number is this?", a: ["21", "22", "19", "40"], correct: 1 },
+        { q: "Which direction is the cursor moving right now?", a: ["Up", "Down", "Left", "Dynamic Vector Matrix"], correct: 3, behavior: "flee" },
+        { q: "The answer below is a lie. Click the truth.", a: ["The truth", "A Lie", "Both", "Neither"], correct: 1 },
+        { q: "Quick! Balance the equation: $x^2 + y^2 = \\text{Loss}$", a: ["Graph It", "Panic Click", "Close Browser", "Trevor"], correct: 0 },
+        { q: "Click the option that is perfectly centered on your screen.", a: ["Left Panel", "Right Panel", "This exact choice", "The Header"], correct: 2, behavior: "flee" },
+        { q: "Is this game fair?", a: ["Yes", "No", "Absolutely Not", "The engine is rigged"], correct: 3, behavior: "fake-timer" },
+        { q: "Click the link: <span id='hidden-trigger' class='trigger-link'>ADVANCE</span>", a: ["Don't click link", "Click link", "Click here instead", "Void"], correct: 0, interactive: "hidden-button" },
+        { q: "What happens if you click the Score meter right now?", a: ["Instant Win", "Instant Death", "Nothing", "It advances"], correct: 1 },
+        { q: "Select the most optimal engine build strategy:", a: ["Turbo 2JZ", "Supercharged TRX", "Welded Diff", "Linux Kernel Wipe"], correct: 2 },
+        { q: "Which button feels the most heavy?", a: ["Heavy Button", "Feather Button", "Lead Button", "Anvil Button"], correct: 0, behavior: "flee" },
+        { q: "If you lose right now, whose fault is it?", a: ["Mine", "The Code", "Trevor", "Your internet speed"], correct: 2 },
+        { q: "Click the button that does not have an event listener bound.", a: ["Bound 1", "Bound 2", "Bound 3", "Unbound"], correct: 3 },
+        { q: "What is the capital of the Gauntlet Master Engine?", a: ["Brooklyn Park", "The DOM", "Memory Leak", "Void-ville"], correct: 1 },
+        { q: "HURRY UP REBOOT INCOMING IN 1 SECOND", a: ["Save Game", "Alt+F4", "Panic", "Click Me"], correct: 3, behavior: "fake-timer" },
+        { q: "Click the last remaining pixel of your sanity.", a: ["Pixel", "Sanity", "Void", "None left"], correct: 3, behavior: "flee" },
+        { q: "Are you finally at the end?", a: ["Yes", "No", "Two more questions", "Please let it stop"], correct: 2 },
+        { q: "ULTIMATE RAGE COMPONENT: Catch the ghost button.", a: ["GHOST", "VOID", "TREVOR", "DEATH"], correct: 0, behavior: "flee" },
+        { q: "RAGE FINAL: Click the absolute void layout matrix.", a: ["THE VOID", "THE VOID", "THE VOID", "THE VOID"], correct: 3 }
+    ];
+
+    let currentQuestions = [], lives = 3, currentQuestion = 0, currentMode = '';
+    let isLocked = false;
+    let feedbackTimer;
+    let rageTimerInterval;
+    let popups = [];
+    let masterAudioTrack = null;
+    let buttonPositions = []; 
+
+    function initGlobalSoundEngine() {
+        if (!masterAudioTrack) {
+            masterAudioTrack = new Audio();
+            // INTEGRATED: Verified structured jsDelivr CDN streaming reference loop
+            masterAudioTrack.src = "https://cdn.jsdelivr.net/gh/aCrazyQuasar/project-music@main/virtualinsanity_spotdown.org.mp3";
+            masterAudioTrack.loop = true;
+            masterAudioTrack.preload = "auto";
+        }
+    }
+
+    function forceUnlockAudio() {
+        initGlobalSoundEngine();
+        masterAudioTrack.volume = 0.01;
+        masterAudioTrack.play()
+            .then(() => {
+                masterAudioTrack.pause();
+                masterAudioTrack.currentTime = 0;
+                alert("Audio Pipeline Successfully Forced Open inside W3S Sandbox.");
+            })
+            .catch(e => alert("Click screen directly first, then try again: " + e));
+    }
+
+    function startGame(mode) {
+        currentMode = mode;
+        isLocked = false;
+        initGlobalSoundEngine();
+        
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('captcha-container').style.display = 'none';
+        document.getElementById('rage-timer').style.display = 'none';
+        clearInterval(rageTimerInterval);
+        clearPopups();
+        document.onmousemove = null;
+
+        if (masterAudioTrack) {
+            masterAudioTrack.pause();
+            masterAudioTrack.currentTime = 0;
+        }
+
+        if (mode === 'part2') {
+            document.getElementById('captcha-container').style.display = 'block';
+            document.querySelectorAll('.captcha-cell').forEach(c => c.classList.remove('selected'));
+        } else if (mode === 'part3') {
+            currentQuestions = part3;
+            document.getElementById('game-ui').style.display = 'block';
+            loadQuestion();
+        } else {
+            currentQuestions = part1;
+            document.getElementById('game-ui').style.display = 'block';
+            loadQuestion();
+        }
+    }
+
+    function toggleCaptchaTile(element) {
+        element.classList.toggle('selected');
+    }
+
+    function verifyCaptcha() {
+        document.getElementById('captcha-container').style.display = 'none';
+        currentQuestions = part2;
+        document.getElementById('game-ui').style.display = 'block';
+        loadQuestion();
+    }
+
+    function resetDeathScreenAnimations() {
+        document.getElementById('death-screen').style.display = 'none';
+        document.getElementById('death-title').style.opacity = '0';
+        document.getElementById('death-title').style.transform = 'scale(0.9)';
+        document.getElementById('death-actions').style.opacity = '0';
+        document.getElementById('death-actions').style.transform = 'translateY(20px)';
+    }
+
+    function retry() {
+        resetDeathScreenAnimations();
+        lives = 3; 
+        currentQuestion = 0; 
+        isLocked = false;
+        document.getElementById('lives-display').innerText = "SANITY: 3"; 
+        startGame(currentMode);
+    }
+
+    function goToMainMenu() {
+        resetDeathScreenAnimations();
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('captcha-container').style.display = 'none';
+        document.getElementById('rage-timer').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'block';
+        clearInterval(rageTimerInterval);
+        clearPopups();
+        document.onmousemove = null;
+        lives = 3;
+        currentQuestion = 0;
+        currentMode = '';
+        isLocked = false;
+        document.getElementById('lives-display').innerText = "SANITY: 3";
+
+        if (masterAudioTrack) {
+            masterAudioTrack.pause();
+            masterAudioTrack.currentTime = 0;
+        }
+    }
+
+    function showFeedback(text, isCorrect) {
+        const fb = document.getElementById('feedback-screen');
+        fb.innerText = text;
+        fb.style.backgroundColor = isCorrect ? 'var(--success)' : 'var(--error)';
+        fb.classList.add('show');
+        clearTimeout(feedbackTimer);
+        feedbackTimer = setTimeout(() => fb.classList.remove('show'), 600);
+    }
+
+    function clearPopups() {
+        popups.forEach(p => p.remove());
+        popups = [];
+    }
+
+    function spawnFakePopup() {
+        const popup = document.createElement('div');
+        popup.className = 'fake-popup';
+        popup.style.left = Math.random() * (window.innerWidth - 300) + 'px';
+        popup.style.top = Math.random() * (window.innerHeight - 200) + 'px';
+        
+        popup.innerHTML = `
+            <div class="fake-popup-header">
+                <span>SYSTEM WARNING v4.11</span>
+                <div class="fake-popup-close" onclick="triggerPopupPenalty(event)">X</div>
+            </div>
+            <div class="fake-popup-body">
+                <p>Your browser memory leak is running out of space!</p>
+                <button class="fake-popup-btn" onclick="triggerPopupPenalty(event)">Optimize Now</button>
+            </div>
+        `;
+        document.body.appendChild(popup);
+        popups.push(popup);
+    }
+
+    function triggerPopupPenalty(e) {
+        e.stopPropagation();
+        if(!isLocked) wrong();
+    }
+
+    function loadQuestion() {
+        const q = currentQuestions[currentQuestion];
+        if (!q) return;
+        
+        isLocked = false;
+        document.onmousemove = null;
+        clearPopups();
+        clearInterval(rageTimerInterval);
+        document.getElementById('rage-timer').style.display = 'none';
+        buttonPositions = []; 
+        
+        // SYNCED AUDIO DROPS: Virtual Insanity hits exactly at Question 2 (Index 1)
+        if (masterAudioTrack && currentMode === 'part3') {
+            if (currentQuestion === 1) { 
+                masterAudioTrack.volume = 0.35;
+                masterAudioTrack.play().catch(err => console.log("Sandbox error bypassed: ", err));
+            }
+        }
+        
+        document.getElementById('question').innerHTML = q.q;
+        document.getElementById('score-display').innerText = `${(currentQuestion + 1).toString().padStart(2, '0')} / 40`;
+        const optEl = document.getElementById('options');
+        optEl.innerHTML = '';
+        
+        if (q.behavior === "fake-timer") {
+            const timerDisplay = document.getElementById('rage-timer');
+            timerDisplay.style.display = 'block';
+            let timeLeft = 2.00;
+            timerDisplay.innerText = timeLeft.toFixed(2);
+            rageTimerInterval = setInterval(() => {
+                timeLeft -= 0.07;
+                if(timeLeft <= 0) {
+                    clearInterval(rageTimerInterval);
+                    if(!isLocked) wrong();
+                } else {
+                    timerDisplay.innerText = timeLeft.toFixed(2);
+                }
+            }, 70);
+        }
+
+        if (q.behavior === "spawn-ad") {
+            for(let i=0; i<4; i++) spawnFakePopup();
+        }
+
+        q.a.forEach((opt, i) => {
+            const b = document.createElement('button');
+            b.innerText = opt;
+            buttonPositions.push({ x: 0, y: 0 });
+            
+            if(q.behavior === "color-bait") {
+                const colors = ["#d32f2f", "#1a73e8", "#e65100", "#2e7d32"];
+                b.style.backgroundColor = colors[i];
+                b.style.color = "#fff";
+            }
+            
+            b.onclick = () => { 
+                if (isLocked) return;
+                if (i === q.correct) next(); else wrong(); 
+            };
+            optEl.appendChild(b);
+        });
+
+        const trigger = document.getElementById('hidden-trigger');
+        if(q.interactive === "hidden-button" && trigger) {
+            trigger.onclick = () => { if(!isLocked) next(); };
+        }
+        
+        const sd = document.getElementById('lives-display');
+        if (q.interactive === "hover-sanity-trap") {
+            sd.onmouseover = () => { if(!isLocked) wrong(); };
+        } else {
+            sd.onmouseover = (q.interactive === "hover-sanity") ? () => { if(!isLocked) { next(); sd.onmouseover = null; } } : null;
+        }
+        
+        const sc = document.getElementById('score-display');
+        sc.style.cursor = (q.interactive === "click-score") ? "pointer" : "default";
+        sc.onclick = (q.interactive === "click-score") ? () => { if(!isLocked) next(); } : null;
+
+        // FIXED INTERACTION SYSTEM: Hardware-accelerated translate3d tracking matrix arrays
+        if (q.behavior === "flee") {
+            document.onmousemove = (e) => {
+                const buttons = optEl.querySelectorAll('button');
+                buttons.forEach((btn, index) => {
+                    const rect = btn.getBoundingClientRect();
+                    const btnX = rect.left + rect.width / 2;
+                    const btnY = rect.top + rect.height / 2;
+                    
+                    const dist = Math.hypot(e.clientX - btnX, e.clientY - btnY);
+                    
+                    if (dist < 140) {
+                        const angle = Math.atan2(btnY - e.clientY, btnX - e.clientX);
+                        const force = (140 - dist) * 0.95; 
+                        
+                        buttonPositions[index].x += Math.cos(angle) * force;
+                        buttonPositions[index].y += Math.sin(angle) * force;
+                        
+                        buttonPositions[index].x = Math.max(-250, Math.min(buttonPositions[index].x, 250));
+                        buttonPositions[index].y = Math.max(-200, Math.min(buttonPositions[index].y, 200));
+                        
+                        btn.style.transform = `translate3d(${buttonPositions[index].x}px, ${buttonPositions[index].y}px, 0)`;
+                    }
+                });
+            };
+        }
+    }
+
+    function next() { 
+        if (isLocked) return;
+        isLocked = true;
+        clearInterval(rageTimerInterval);
+        showFeedback("CORRECT", true);
+        
+        setTimeout(() => {
+            currentQuestion++; 
+            if(currentQuestion >= currentQuestions.length) {
+                alert("YOU SURVIVED THE MASTER GAUNTLET.");
+                goToMainMenu();
+            } else {
+                loadQuestion();
+            }
+        }, 250);
+    }
+    
+    function wrong() { 
+        if (isLocked) return;
+        isLocked = true;
+        clearInterval(rageTimerInterval);
+        showFeedback("WRONG", false);
+        lives--; 
+        document.getElementById('lives-display').innerText = "SANITY: " + lives; 
+        
+        if(lives <= 0) {
+            setTimeout(() => {
+                clearPopups();
+                document.onmousemove = null;
+                if (masterAudioTrack) masterAudioTrack.pause();
+
+                const ds = document.getElementById('death-screen');
+                const title = document.getElementById('death-title');
+                const actions = document.getElementById('death-actions');
+                
+                ds.style.display = 'flex';
+                setTimeout(() => {
+                    title.style.opacity = '1';
+                    title.style.transform = 'scale(1)';
+                }, 100);
+                
+                setTimeout(() => {
+                    actions.style.opacity = '1';
+                    actions.style.transform = 'translateY(0)';
+                    isLocked = false;
+                }, 1000); 
+            }, 600);
+        } else {
+            setTimeout(loadQuestion, 250); 
+        }
+    }
+</script>
+</body>
+</html>
